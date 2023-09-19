@@ -1,0 +1,142 @@
+grammar Actor
+  rule exp
+    # XXX: value を先頭に持ってくると上手く動かない
+    bin_exp / pair_builtin / pair_exp / if 
+      / letrec / send / recv / new / let / seq / rec
+      / app / value
+  end
+  rule value
+    atom / nat / lambda / var
+  end
+  rule reserved
+    atom / 'pair' / 'send' / 'recv' / 'new' 
+      / 'letrec' / 'let' / 'seq' / 'rec' / 'if'
+      / 'is_pair' / '1st' / '2nd'
+  end
+  rule atom
+    ('true' / 'false' / 'null') {
+        def ast
+          mk_atom(text_value)
+        end
+    }
+  end
+  rule nat
+    !pair_builtin ([0] / [1-9] [0-9]*) {
+        def ast
+          mk_nat(text_value.to_i)
+        end
+    }
+  end
+  rule var
+    !reserved [a-zA-Z] [a-zA-Z_0-9]* {
+        def ast
+          mk_var(text_value)
+        end
+    }
+  end
+  rule bin_exp
+    (op:[+\-*/=] '(' sp? left:exp sp? ',' sp? right:exp sp? ')') {
+      def ast
+        mk_bin_exp(op.text_value, left.ast, right.ast)
+      end
+    }
+  end
+  rule pair_builtin
+    name:('is_pair?' / '1st' / '2nd') '(' exp ')' {
+      def ast
+        mk_pair_builtin(name.text_value, exp.ast)
+      end
+    }
+  end
+  rule lambda
+    ('λ' var '.' sp? exp) {
+      def ast
+        mk_lambda(var.ast[:value], exp.ast)
+      end
+    }
+  end
+  rule pair_exp
+    ('pair(' sp? first:exp sp? ',' sp? second:exp sp? ')') {
+      def ast
+        mk_pair(first.ast, second.ast)
+      end
+    }
+  end
+  rule if
+    ('if(' sp? cond:exp ',' sp? if_true:exp ',' sp? if_false:exp sp? ')') {
+      def ast 
+        mk_if(cond.ast, if_true.ast, if_false.ast)
+      end
+    }
+  end
+  rule letrec
+    ('letrec' sp var sp? '=' sp? value:exp sp 'in' sp target:exp) {
+      def ast
+        mk_letrec(var.ast[:value], value.ast, target.ast)
+      end
+    }
+  end
+  rule send
+    ('send(' sp? data:exp sp? ',' sp? dst:exp sp? ')') {
+      def ast
+        mk_send(data.ast, dst.ast)
+      end
+    }
+  end
+  rule recv
+    ('recv(' sp? exp sp? ')') {
+      def ast
+        mk_recv(exp.ast)
+      end
+    }
+  end
+  rule new
+    ('new(' sp? exp sp? ')') {
+      def ast
+        mk_new(exp.ast)
+      end
+    }
+  end
+  rule let 
+    ('let' sp var sp? '=' sp? value:exp sp 'in' sp target:exp) {
+      def ast
+        mk_app(mk_lambda(var.ast[:value], target.ast), value.ast)
+      end
+    }
+  end
+  rule seq
+    ('seq(' sp? exp sp? rest_args:(',' sp? exp sp?)+ sp? ')') {
+      def ast
+        rest_args_asts = rest_args.elements.map { |arg| arg.exp.ast }
+        mk_seq2(exp.ast, *rest_args_asts)
+      end
+    }
+  end
+  rule rec
+    ('rec(' sp? exp sp? ')') {
+      def ast
+        mk_rec(exp.ast)
+      end
+    }
+  end
+  rule paren
+    '(' exp ')' {
+      def ast
+        exp.ast
+      end
+    }
+  end
+  rule app
+    # x(x)(y) みたいな形式は現状パースできない。
+    # (x(x))(y) のように書く必要がある
+    # ただしこの問題は頑張れば解決する方法はあるらしい TODO
+    (func:(paren / var) '(' sp? exp sp? ')') {
+      def ast
+        mk_app(func.ast, exp.ast)
+        end
+    }
+  end
+  rule sp
+    [ \t\n\r]+
+  end
+end

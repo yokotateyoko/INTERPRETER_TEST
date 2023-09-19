@@ -1,0 +1,37 @@
+grammar Arith
+    rule expression
+        calc / num
+    end
+    rule calc
+      left:num s ope s right:num {
+        def ast
+         {left: left.get_num, right: right.get_num}  
+        end
+      } 
+    end
+    rule s
+        [ \t\n\r]*
+    end
+    rule ope
+      [+]
+    end
+    rule num
+        [0] / ([1-9] [0-9]*) {
+            def get_num
+                text_value.to_i
+            end
+        }
+    end
+
+#    rule expression
+#        str / num / paren
+#    end
+
+    rule paren
+        '(' expression ')'
+    end
+    
+    rule str
+      [a-zA-Z]
+    end
+end
