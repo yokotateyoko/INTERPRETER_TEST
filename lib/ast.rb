@@ -23,6 +23,43 @@ class Ast
         end
     end
 
+    def substitute(var, exp)
+        case @data
+        in {type: 'nat', value:}
+            return self
+        in {type: 'atom', value:}
+            return self
+        in {type: 'var', value:value} if value == var
+            return exp
+        in {type: 'var', value:value}
+            return self
+        in {type: 'pair', first:first, second:second}
+            return mk_pair(first.substitute(var, exp), second.substitute(var, exp))
+        in {type: 'pair_builtin_app', name:name, value:value}
+            return mk_pair_builtin(name, value.substitute(var, exp)) 
+        in {type: 'bin_exp_app', ope:ope, left:left, right:right}
+            return mk_bin_exp(ope, left.substitute(var, exp), right.substitute(var, exp))
+        in {type: 'if', cond:cond, if_true:if_true, if_false:if_false}
+            return mk_if(cond.substitute(var, exp),
+             if_true.substitute(var, exp), if_false.substitute(var, exp))
+        in {type: 'letrec', var:var_, value:value, target:target}
+            return self if var_ == var
+            return mk_letrec(var_, value.substitute(var, exp), target.substitute(var, exp))
+        in {type: 'lambda', arg:arg, exp:func}
+            return self if arg == var # 束縛変数は置換しない
+            return mk_lambda(arg, func.substitute(var, exp))
+        in {type: 'app', func:func, value:value}
+            return mk_app(func.substitute(var, exp), value.substitute(var, exp))
+        in {type:'send', data:data, dst:dst}
+            return mk_send(data.substitute(var, exp), dst.substitute(var, exp))
+        in {type: 'recv', action:action}
+            return mk_recv(action.substitute(var, exp))
+        in {type: 'new', action:action}
+            return mk_new(action.substitute(var, exp))
+        
+        end
+    end
+
     def ==(other)
         other.is_a?(Ast) && other.data == @data
     end
@@ -36,6 +73,22 @@ class Ast
 
     def deconstruct_keys(key)
         @data
+    end
+
+    def to_s
+        case @data
+        # とりあえず repl から使う値型だけ
+        in {type:'atom', value:value}
+            value
+        in {type:'nat', value:value}
+            value.to_s
+        in {type:'var', value:value}
+            value
+        in {type:'lambda', arg:arg, exp:exp}
+            "λ#{arg}.#{exp}"
+        in {type:'pair', first:first, second:second}
+            "pair(#{first}, #{second})"
+        end
     end
 end
 

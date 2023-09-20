@@ -54,4 +54,54 @@ RSpec.describe do
         ast = @parser.parse('=(λx.x, 3)').ast
         expect(reduce(ast)).to eq(mk_atom('false'))
     end
+
+    it '1st(pair(1, 2)) -> 1' do
+        ast = @parser.parse('1st(pair(1,2))').ast
+        expect(reduce(ast)).to eq(mk_nat(1))
+    end
+    it '2nd(pair(1, 2)) -> 2' do
+        ast = @parser.parse('2nd(pair(1,2))').ast
+        expect(reduce(ast)).to eq(mk_nat(2))
+    end
+
+    it 'is_pair?(true) -> false' do
+        ast = @parser.parse('is_pair?(true)').ast
+        expect(reduce(ast)).to eq(mk_atom('false'))
+    end
+    it 'is_pair?(pair(2, 3)) -> true' do
+        ast = @parser.parse('is_pair?(pair(2,3))').ast
+        expect(reduce(ast)).to eq(mk_atom('true'))
+    end
+    it 'if(true, 1, 2) -> 1' do 
+        ast = @parser.parse('if(true, 1, 2)').ast
+        expect(reduce(ast)).to eq(mk_nat(1))
+    end
+    it 'if(false, 1, 2) -> 2' do 
+        ast = @parser.parse('if(false, 1, 2)').ast
+        expect(reduce(ast)).to eq(mk_nat(2))
+    end
+    it 'pair(+(1,1), 4) -> pair(2, 4)' do
+        ast = @parser.parse('pair(+(1,1), 4)').ast
+        expect(reduce(ast)).to eq(mk_pair(mk_nat(2), mk_nat(4)))
+    end
+    it 'pair(2, +(1,3)) -> pair(2, 4)' do
+        ast = @parser.parse('pair(2, +(1,3))').ast
+        expect(reduce(ast)).to eq(mk_pair(mk_nat(2), mk_nat(4)))
+    end
+    it '(λx.x)(1) -> 1' do
+        ast = @parser.parse('(λx.x)(1)').ast
+        expect(reduce(ast)).to eq(mk_nat(1))
+    end
+    it 'letrec x = 1 in x -> 1' do
+        ast = @parser.parse('letrec x = 1 in x').ast
+        expect(reduce(ast)).to eq(mk_nat(1))
+    end
+    it 'letrec fact = λx.if( =(x, 1), 1, *(x, fact(-(x,1))) ) in fact(4) -> 24' do
+        ast = @parser.parse('letrec fact = λx.if( =(x, 1), 1, *(x, fact(-(x,1))) ) in fact(4)').ast
+        # letrec fact = \x.if( =(x, 1), 1, *(x, fact(-(x,1))) ) in fact(4)
+        until ast.val?
+            ast = reduce(ast)
+        end
+        expect(ast).to eq(mk_nat(24))
+    end
 end

@@ -20,5 +20,36 @@ def reduce(ast)
         in '/'
             return mk_nat(left_val / right_val)
         end
+    in {type: 'pair_builtin_app', name: name, value: value}
+        return mk_pair_builtin(name, reduce(value)) unless value.val?
+
+        return mk_atom(value[:type] == 'pair' ? 'true' : 'false') if name == 'is_pair?'
+        value => {type:'pair', first: first, second: second}
+        case name
+        in '1st'
+            return first
+        in '2nd'
+            return second
+        end
+    in {type:'if', cond:cond, if_true:if_true, if_false:if_false}
+        return mk_if(reduce(cond), if_true, if_false) unless cond.val?
+        case cond
+        in {type:'atom', value:'true'}
+            return if_true
+        in {type:'atom', value:'false'}
+            return if_false
+        end
+    in {type:'pair', first:first, second:second}
+        return mk_pair(reduce(first), second) unless first.val?
+        return mk_pair(first, reduce(second)) unless second.val?
+        raise ArgumentError.new('なんかおかしいぞ！')
+    in {type:'app', func:func, value:value}
+        return mk_app(reduce(func), value) unless func.val?
+        return mk_app(func, reduce(value)) unless value.val?
+        func => {type:'lambda', arg:arg, exp:exp}
+        exp.substitute(arg, value)
+    in {type:'letrec', var:var, value:value, target:target}
+        return mk_letrec(var, reduce(value), target) unless value.val?
+        target.substitute(var, value.substitute(var, mk_letrec(var, value, value)))
     end
 end
