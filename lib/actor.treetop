@@ -49,7 +49,7 @@ grammar Actor
     }
   end
   rule lambda
-    ('λ' var '.' sp? exp) {
+    ('\\' var '.' sp? exp) {
       def ast
         mk_lambda(var.ast[:value], exp.ast)
       end

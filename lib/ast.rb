@@ -56,8 +56,15 @@ class Ast
             return mk_recv(action.substitute(var, exp))
         in {type: 'new', action:action}
             return mk_new(action.substitute(var, exp))
-        
         end
+    end
+    def to_hole_notation
+        #{R: Astの次に評価される箇所をホールにしたもの Er: ホールと入れ替わったやつ }
+        #ast = mk_app(mk_lambda('x', M), mk_new(N))
+        #ast.redex? == false
+        #(mk_new(N)).redex? == true
+        #{R: mk_app(mk_lambda('x', M), mk_hole), Er: mk_new(N) }
+        
     end
 
     def ==(other)
@@ -88,8 +95,40 @@ class Ast
             "λ#{arg}.#{exp}"
         in {type:'pair', first:first, second:second}
             "pair(#{first}, #{second})"
+        in {type: 'if', cond:cond, if_true:if_true, if_false:if_false}
+            "if(#{cond}, #{if_true}, #{if_false})"
+        in {type:'bin_exp_app', ope:ope, left:left, right:right}
+            "#{ope}(#{left}, #{right})"
+        in {type:'pair_builtin_app', name:name, value:value}
+            "#{name}(#{value.to_s})"
+        in {type:'app', func:func, value:value}
+            "(#{func})(#{value})"
+        in {type:'letrec', var:var, value:value, target:target}
+            "letrec #{var} = #{value} in (#{target})"
+        in {type:'send', data:data, dst:dst}
+            "send(#{data}, #{dst})"
+        in {type:'recv', action:action}
+            "recv(#{action})"
+        in {type:'new', action:action}
+            "new(#{action})"
         end
     end
+end
+class HoleNotation
+    def to_s
+        "ロ"
+    end
+    def ==
+    end
+    def []=
+    end
+    def []
+    end
+    def deconstruct_keys
+    end
+end
+def mk_hole
+    HoleNotation.new
 end
 
 def mk_atom(value)

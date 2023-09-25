@@ -8,4 +8,5 @@ group :development do
  # gem 'guard-rspec', require: false
   gem 'rspec', require: false
 end
+gem 'colorize'
 #gem 'stackprof'
