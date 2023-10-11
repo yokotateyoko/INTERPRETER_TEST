@@ -53,3 +53,15 @@ def reduce(ast)
         target.substitute(var, value.substitute(var, mk_letrec(var, value, value)))
     end
 end
+
+class Ast
+    def reducible?
+        begin
+            # self が λ計算の操作的意味論で簡約できない場合は、 reduce(self) は例外を投げるようになっている
+            reduce(self)
+            true
+        rescue
+            false
+        end
+    end
+end

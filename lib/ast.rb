@@ -16,13 +16,6 @@ class Ast
         end
     end
 
-    def reducible?
-        case @data
-        in {type:'bin_exp_app', ope:, left:left, right:right}
-            left.val? && right.val?
-        end
-    end
-
     def substitute(var, exp)
         case @data
         in {type: 'nat', value:}
@@ -59,12 +52,67 @@ class Ast
         end
     end
     def to_hole_notation
-        #{R: Astの次に評価される箇所をホールにしたもの Er: ホールと入れ替わったやつ }
-        #ast = mk_app(mk_lambda('x', M), mk_new(N))
-        #ast.redex? == false
-        #(mk_new(N)).redex? == true
-        #{R: mk_app(mk_lambda('x', M), mk_hole), Er: mk_new(N) }
-        
+        case @data
+        in {type:'bin_exp_app', left:left, right:right, ope:ope}
+            if left.reducible?
+                left_ = left.to_hole_notation
+                return HoleNotation.new(mk_bin_exp(ope, left_.reduce_context, right), left_.reducible_expression)
+            elsif right.reducible?
+                right_ = right.to_hole_notation
+                return HoleNotation.new(mk_bin_exp(ope, left, right_.reduce_context), right_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        in {type:'pair_builtin_app', name:name, value:value}
+            if value.reducible?
+                value_ = value.to_hole_notation
+                return HoleNotation.new(mk_pair_builtin(name, value_.reduce_context), value_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        in {type: 'if', cond:cond, if_true:if_true, if_false:if_false}
+            if cond.reducible?
+                cond_ = cond.to_hole_notation
+                return HoleNotation.new(mk_if(cond_.reduce_context, if_true, if_false), cond_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        in {type:'pair', first:first, second:second}
+            if first.reducible?
+                first_ = first.to_hole_notation
+                return HoleNotation.new(mk_pair(first_.reduce_context, second), first_.reducible_expression)
+            elsif second.reducible?
+                second_ = second.to_hole_notation
+                return HoleNotation.new(mk_pair(first, second_.reduce_context), second_.reducible_expression)
+            else
+                return nil
+            end
+        in {type:'letrec', var:var, value:value, target:target}
+            if value.reducible?
+                value_ = value.to_hole_notation
+                return HoleNotation.new(mk_letrec(var, value_.reduce_context, target), value_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        in {type:'app', func:func, value:value}
+            if func.reducible?
+                func_ = func.to_hole_notation
+                return HoleNotation.new(mk_app(func_.reduce_context, value), func_.reducible_expression)
+            elsif value.reducible?
+                value_ = value.to_hole_notation
+                return HoleNotation.new(mk_app(func, value_.reduce_context), value_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        in {type:'send', data:data, dst:dst}
+            if data.reducible?
+                data_ = data.to_hole_notation
+                return HoleNotation.new(mk_send(data_.reduce_context, dst), 
+                                        data_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end
+        end
     end
 
     def ==(other)
@@ -111,14 +159,26 @@ class Ast
             "recv(#{action})"
         in {type:'new', action:action}
             "new(#{action})"
+        in {type:'hole'}
+            "[ ]"
         end
     end
 end
 class HoleNotation
-    def to_s
-        "ロ"
+    # reduce_context : hole を含む AST
+    # reducible_expression : AST
+    def initialize(reduce_context, reducible_expression)
+        @reduce_context = reduce_context
+        @reducible_expression = reducible_expression
     end
-    def ==
+    attr_reader :reduce_context, :reducible_expression
+    def to_s
+        "#{@reduce_context} > #{@reducible_expression} <"
+    end
+    def ==(other)
+        other.is_a?(HoleNotation) && 
+        self.reduce_context == other.reduce_context &&
+        self.reducible_expression == other.reducible_expression
     end
     def []=
     end
@@ -128,7 +188,7 @@ class HoleNotation
     end
 end
 def mk_hole
-    HoleNotation.new
+    Ast.new({type: 'hole'})
 end
 
 def mk_atom(value)

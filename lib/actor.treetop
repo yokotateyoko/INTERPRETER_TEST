@@ -120,7 +120,7 @@ grammar Actor
     }
   end
   rule paren
-    '(' exp ')' {
+    '(' sp? exp sp? ')' {
       def ast
         exp.ast
       end

@@ -1,5 +1,6 @@
 require "ast"
 require "actor_parser"
+require "actor_evaluator"
 RSpec.describe Ast do
     describe "#substitute" do
         it 'x{x |-> y} -> y' do
@@ -60,20 +61,21 @@ RSpec.describe Ast do
         end
     end
 
-    xdescribe '#to_hole_notation' do
+    describe '#to_hole_notation' do
       [
         ['send(1, a)', mk_hole, mk_send(mk_nat(1), mk_var('a'))],
         ['send(+(1,1), a)', mk_send(mk_hole, mk_var('a')), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
+        ['send(+(+(1,2),3), a)', mk_send(mk_bin_exp('+', mk_hole, mk_nat(3)), mk_var('a')), mk_bin_exp('+', mk_nat(1), mk_nat(2))],
         ['pair(+(1,1), 2)', mk_pair(mk_hole, mk_nat(2)), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
         ['if(is_pair?(1), 1, 2)', mk_if(mk_hole, mk_nat(1), mk_nat(2)), mk_pair_builtin('is_pair?', mk_nat(1))],
         ['(\x.x)(+(1, 1))', mk_app(mk_lambda('x', mk_var('x')), mk_hole), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
+        ['( (\x.\y.+(x,y))(1) )(2)', mk_app(mk_hole, mk_nat(2)), mk_app(mk_lambda('x', mk_lambda('y', mk_bin_exp('+', mk_var('x'), mk_var('y')))), mk_nat(1))],
         ['(\x.+(x, 1))(+(1, 1))', mk_app(mk_lambda('x', mk_bin_exp('+', mk_var('x'), mk_nat(1))), mk_hole), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
         ['letrec x = +(1,1) in x', mk_letrec('x', mk_hole, mk_var('x')), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
         ['letrec x = 1 in +(x,1)', mk_hole, mk_letrec('x', mk_nat(1), mk_bin_exp('+', mk_var('x'), mk_nat(1)))],
         ['(letrec f = \x.x in f)(+(1, 1))', mk_app(mk_hole, mk_bin_exp('+', mk_nat(1), mk_nat(1))), mk_letrec('f', mk_lambda('x', mk_var('x')), mk_var('f'))],
-      ].each do |input, reduce_context, redex|
-        # hole_notation = HoleNotation.new({ R: reduce_context, Er: redex })
-        hole_notation = { R: reduce_context, Er: redex }
+      ].each do |input, reduce_context, reducible_expression|
+        hole_notation = HoleNotation.new(reduce_context, reducible_expression)
         it "#{input} -> #{hole_notation}" do
           ast = Parser.new.parse(input).ast
           expect(ast.to_hole_notation).to eq(hole_notation)
