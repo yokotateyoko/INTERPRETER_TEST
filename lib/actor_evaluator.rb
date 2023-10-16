@@ -51,6 +51,13 @@ def reduce(ast)
     in {type:'letrec', var:var, value:value, target:target}
         return mk_letrec(var, reduce(value), target) unless value.val?
         target.substitute(var, value.substitute(var, mk_letrec(var, value, value)))
+    in {type:'send', data:data, dst:dst}
+        return mk_send(reduce(data), dst) unless data.val? 
+        return mk_send(data, reduce(dst)) unless dst.val? 
+        return mk_atom('null')
+    in {type:'recv', action:action}
+        return mk_recv(reduce(action)) unless action.val?
+        #return mk_app(action, value)
     end
 end
 

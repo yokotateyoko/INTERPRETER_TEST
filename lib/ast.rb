@@ -109,9 +109,27 @@ class Ast
                 data_ = data.to_hole_notation
                 return HoleNotation.new(mk_send(data_.reduce_context, dst), 
                                         data_.reducible_expression)
+            elsif dst.reducible?
+                dst_ = dst.to_hole_notation
+                return HoleNotation.new(mk_send(data, dst_.reduce_context), 
+                                        dst_.reducible_expression)
             else
                 return HoleNotation.new(mk_hole, self)
             end
+        in {type:'recv', action:action}
+            if action.reducible?
+                action_ = action.to_hole_notation
+                return HoleNotation.new(mk_recv(action_.reduce_context), action_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end 
+        in {type:'new', action:action}
+            if action.reducible?
+                action_ = action.to_hole_notation
+                return HoleNotation.new(mk_new(action_.reduce_context), action_.reducible_expression)
+            else
+                return HoleNotation.new(mk_hole, self)
+            end 
         end
     end
 
@@ -163,6 +181,15 @@ class Ast
             "[ ]"
         end
     end
+
+    def modify(&modifier)
+        ast = self.clone
+        modified_ast = modifier.call(ast)
+        ast.data.each do |k, v|
+            ast.data[k] = v.modify(&modifier) if v.is_a?(Ast)
+        end
+        modified_ast
+    end
 end
 class HoleNotation
     # reduce_context : hole を含む AST
@@ -172,6 +199,20 @@ class HoleNotation
         @reducible_expression = reducible_expression
     end
     attr_reader :reduce_context, :reducible_expression
+
+    def to_ast(replace)
+        # ruby は hash の挿入順が維持されるので
+        # each で挿入順の若い方から見ていく
+        # hole は1つしかないので1回だけ置換されるはず
+        @reduce_context.modify do |ast|
+            case ast
+            in {type:'hole'}
+                replace
+            else
+                ast
+            end
+        end
+    end
     def to_s
         "#{@reduce_context} > #{@reducible_expression} <"
     end

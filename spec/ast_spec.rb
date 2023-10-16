@@ -74,12 +74,30 @@ RSpec.describe Ast do
         ['letrec x = +(1,1) in x', mk_letrec('x', mk_hole, mk_var('x')), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
         ['letrec x = 1 in +(x,1)', mk_hole, mk_letrec('x', mk_nat(1), mk_bin_exp('+', mk_var('x'), mk_nat(1)))],
         ['(letrec f = \x.x in f)(+(1, 1))', mk_app(mk_hole, mk_bin_exp('+', mk_nat(1), mk_nat(1))), mk_letrec('f', mk_lambda('x', mk_var('x')), mk_var('f'))],
+        ['recv(\x.x)', mk_hole, mk_recv(mk_lambda('x', mk_var('x')))],
+        ['recv(+(1,1))', mk_recv(mk_hole), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
+        ['new(\x.x)', mk_hole, mk_new(mk_lambda('x', mk_var('x')))],
+        ['new(+(1,1))', mk_new(mk_hole), mk_bin_exp('+', mk_nat(1), mk_nat(1))],
+        # send(recv(\x.x), new(+(1,1))
+        # R: send(口, new(+(1,1))), Er recv(\x.x): 
+        # ['send(recv(\x.x), new(+(1,1)))', mk_send(mk_hole, mk_new(mk_bin_exp('+', mk_nat(1), mk_nat(1)))), mk_recv(mk_lambda('x', mk_var('x')))],
       ].each do |input, reduce_context, reducible_expression|
         hole_notation = HoleNotation.new(reduce_context, reducible_expression)
         it "#{input} -> #{hole_notation}" do
           ast = Parser.new.parse(input).ast
+          puts "Ast#to_hole_notattion: #{ast.to_hole_notation}"
+          puts "Expected: #{hole_notation}"
           expect(ast.to_hole_notation).to eq(hole_notation)
         end
       end
+    end
+
+    describe '#to_ast' do
+        it '+(1, 口) -> +(1, null)' do
+            exp = mk_bin_exp('+', mk_nat(1), mk_send(mk_var('x'), mk_var('b')))
+            hole_notation = exp.to_hole_notation
+            expected = mk_bin_exp('+', mk_nat(1), mk_atom('null'))
+            expect(hole_notation.to_ast(mk_atom('null'))).to eq(expected)
+        end
     end
 end
