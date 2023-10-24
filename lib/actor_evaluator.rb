@@ -57,7 +57,11 @@ def reduce(ast)
         return mk_atom('null')
     in {type:'recv', action:action}
         return mk_recv(reduce(action)) unless action.val?
-        #return mk_app(action, value)
+        # return mk_app(action, value)
+    in {type:'new', action:action}
+        return mk_new(reduce(action)) unless action.val?
+        # 親アクター名が分からないと新しいアクター名が決まらない
+        #return mk_var('')
     end
 end
 

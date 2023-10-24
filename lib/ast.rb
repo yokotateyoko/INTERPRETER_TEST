@@ -52,6 +52,7 @@ class Ast
         end
     end
     def to_hole_notation
+        return nil unless self.reducible?
         case @data
         in {type:'bin_exp_app', left:left, right:right, ope:ope}
             if left.reducible?

@@ -3,10 +3,19 @@ require_relative 'ast'
 Treetop.load "lib/actor"
 
 class Parser < ActorParser
-    def parse(input)
-        syntax_node = super(input)
+    def parse(input, *rest)
+        syntax_node = super(input, *rest)
         raise ArgumentError.new(self.failure_reason) if syntax_node.nil?
         syntax_node
+    end
+
+    def valid_var?(input)
+        begin
+            self.parse(input, root: :var)
+            true
+        rescue
+            false
+        end
     end
 end
 =begin

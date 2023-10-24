@@ -32,10 +32,11 @@ RSpec.describe do
             expect(@parser.parse("MIX123").ast).to eq(mk_var("MIX123"))
         end
         it "アンダースコア始まりを許容しない" do
-            expect(@parser.parse("_MIX123")).to be_nil
+            expect do @parser.parse("_MIX123") end.to raise_error(ArgumentError)
+            # expect(@parser.parse("_MIX123")).to be_nil
         end
         it "数字から始まる変数名は許容しない" do
-            expect(@parser.parse("123_variable")).to be_nil
+            expect do @parser.parse("123_variable") end.to raise_error(ArgumentError)
         end
     end
     describe "プリミティブ演算適用のパース" do
@@ -48,7 +49,7 @@ RSpec.describe do
                 )
             end
             it "#{name} の引数の数が異なる" do
-                expect(@parser.parse("#{op}(1)")).to be_nil
+                expect do @parser.parse("#{op}(1)") end.to raise_error(ArgumentError)
             end
         end
         it "is_pair? 演算" do
@@ -67,36 +68,36 @@ RSpec.describe do
             )
         end
         it "is_pair? 演算の引数の数が異なる" do
-            expect(@parser.parse("is_pair?(1,2)")).to be_nil
+            expect do @parser.parse("is_pair?(1,2)") end.to raise_error(ArgumentError)
         end
         it "1st 演算の引数の数が異なる" do
-            expect(@parser.parse("1st(hoge,2)")).to be_nil
+            expect do @parser.parse("1st(hoge,2)") end.to raise_error(ArgumentError)
         end
         it "2nd 演算の引数の数が異なる" do
-            expect(@parser.parse("2nd(fuga,3)")).to be_nil
+            expect do @parser.parse("2nd(fuga,3)") end.to raise_error(ArgumentError)
         end
     end
 
     describe 'ラムダ抽象のパース' do
         plus_x5 = mk_bin_exp('+', mk_var('x'), mk_nat(5))
         it "ラムダ抽象" do
-            expect(@parser.parse('λx.+(x,5)').ast).to eq(
+            expect(@parser.parse('\x.+(x,5)').ast).to eq(
                mk_lambda('x', plus_x5)
             )
         end
         it "カリー化された関数は許容する" do
-            expect(@parser.parse('λx. λy. +(x,5)').ast).to eq(
+            expect(@parser.parse('\x. \y. +(x,5)').ast).to eq(
                 mk_lambda('x', mk_lambda('y', plus_x5))
             )
         end
         it "カリー化された関数は許容する (x + y版)" do
             plus_xy = mk_bin_exp('+', mk_var('x'), mk_var('y'))
-            expect(@parser.parse('λx. λy. +(x,y)').ast).to eq(
+            expect(@parser.parse('\x. \y. +(x,y)').ast).to eq(
                 mk_lambda('x', mk_lambda('y', plus_xy))
             )
         end
         it "引数が複数あるのは NG" do
-            expect(@parser.parse('λx y.+(x,5)')).to be_nil
+            expect do @parser.parse('\\x y.+(x,5)') end.to raise_error(ArgumentError)
         end
     end
 
@@ -107,10 +108,10 @@ RSpec.describe do
             )
         end
         it 'value を引数に取るペア生成の引数の数が異なる' do
-            expect(@parser.parse("pair(1)")).to be_nil
+            expect do @parser.parse("pair(1)") end.to raise_error(ArgumentError)
         end
         it '引数の型が value じゃない' do
-            expect(@parser.parse("pair(1, ...)")).to be_nil
+            expect do @parser.parse("pair(1, ...)") end.to raise_error(ArgumentError)
         end
         it '式を引数に取るペア生成' do
             expect(@parser.parse("pair(+(y, 3), pair(1, 2))").ast).to eq(
@@ -125,10 +126,10 @@ RSpec.describe do
             )
         end
         it '条件分岐の引数の数が足りない' do
-            expect(@parser.parse("if(1,2)")).to be_nil
+            expect do @parser.parse("if(1,2)") end.to raise_error(ArgumentError)
         end
         it '条件分岐の引数の数が多い' do
-            expect(@parser.parse("if(1,2,3,4)")).to be_nil
+            expect do @parser.parse("if(1,2,3,4)") end.to raise_error(ArgumentError)
         end
     end
     describe '再帰定義のパース' do 
@@ -138,7 +139,7 @@ RSpec.describe do
             )
         end
         it '変数名の部分が変数名じゃない' do
-            expect(@parser.parse("letrec 1 = 0 in if(1, 2, 3)")).to be_nil
+            expect do @parser.parse("letrec 1 = 0 in if(1, 2, 3)") end.to raise_error(ArgumentError)
         end
     end
     describe 'send, recv, new のパース' do
@@ -153,28 +154,28 @@ RSpec.describe do
             )
         end
         it 'new' do
-            expect(@parser.parse('new(λx.x)').ast).to eq(
+            expect(@parser.parse('new(\x.x)').ast).to eq(
                 mk_new(mk_lambda('x', mk_var('x')))
             )
         end
 
         it 'send の引数が足りない' do
-            expect(@parser.parse("send(123)")).to be_nil
+            expect do @parser.parse("send(123)") end.to raise_error(ArgumentError)
         end
         it 'recv の引数が足りない' do
-            expect(@parser.parse('recv()')).to be_nil
+            expect do @parser.parse('recv()') end.to raise_error(ArgumentError)
         end
         it 'new の引数が足りない' do
-            expect(@parser.parse('new()')).to be_nil
+            expect do @parser.parse('new()') end.to raise_error(ArgumentError)
         end
         it 'send の引数が多い' do
-            expect(@parser.parse("send(a, b, c)")).to be_nil
+            expect do @parser.parse("send(a, b, c)") end.to raise_error(ArgumentError)
         end
         it 'recv の引数が多い' do
-            expect(@parser.parse('recv(a, b)')).to be_nil
+            expect do @parser.parse('recv(a, b)') end.to raise_error(ArgumentError)
         end
         it 'new の引数が多い' do
-            expect(@parser.parse('new(a, b)')).to be_nil
+            expect do @parser.parse('new(a, b)') end.to raise_error(ArgumentError)
         end
     end
     describe 'let 糖衣構文のパース' do
@@ -184,7 +185,7 @@ RSpec.describe do
             )
         end
         it '変数名が変数名じゃない' do 
-            expect(@parser.parse("let true = 3 in 5")).to be_nil
+            expect do @parser.parse("let true = 3 in 5") end.to raise_error(ArgumentError)
         end
     end
     describe 'seq 糖衣構文のパース' do
@@ -194,7 +195,7 @@ RSpec.describe do
             )
         end
         it 'seq の引数が1つはダメ' do 
-            expect(@parser.parse('seq(1)')).to be_nil
+            expect do @parser.parse('seq(1)') end.to raise_error(ArgumentError)
         end
         it 'seq の引数が3つのケースをパースできる' do
             expect(@parser.parse('seq(1, 2, a)').ast).to eq(
@@ -216,7 +217,18 @@ RSpec.describe do
             )
         end
         it '関数適用の引数が2つはダメ' do
-            expect(@parser.parse("hoge_func(1,2)")).to be_nil
+            expect do @parser.parse("hoge_func(1,2)") end.to raise_error(ArgumentError)
+        end
+    end
+    describe '#valid_var?' do
+        [
+            ['abc', true],
+            ['1', false],
+            ['_', false],
+        ].each do |input, expected|
+            it '#valid_var?' do
+                expect(@parser.valid_var?(input)).to eq(expected)
+            end
         end
     end
 end
